@@ -193,14 +193,26 @@ void RFBSS::setImage(const QImage &newImage, const bool & appendToList)
 {
     image = newImage;
     imageLabel->setPixmap(QPixmap::fromImage(image));
+    //imageLabel->set.scaled(scrollArea->width(),scrollArea->height(),Qt::KeepAspectRatio,Qt::SmoothTransformation));
     scaleFactor = 1.0;
-
     scrollArea->setVisible(true);
     printAct->setEnabled(true);
     fitToWindowAct->setEnabled(true);
     updateActions();
     if (!fitToWindowAct->isChecked())
         imageLabel->adjustSize();
+
+   /* while (scrollArea->width() < imageLabel->width())
+    {
+        scaleImage(0.9);
+    }*/
+    int l_scrAreaW = scrollArea->width();
+    int l_imgLblW = imageLabel->width();
+    if(l_scrAreaW< l_imgLblW)
+    {
+        double l_div = 1.0/((double)l_imgLblW / (double)l_scrAreaW);
+        scaleImage(l_div);
+    }
     if (appendToList)
         appendToImageList(newImage);
 }
@@ -506,7 +518,7 @@ void RFBSS::appendToImageList(const QImage &newImage)
     l_lbl->setFixedWidth(150);
     l_lbl->setFixedHeight(100);
     l_lbl->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    l_lbl->setPixmap(QPixmap::fromImage(image));
+    l_lbl->setPixmap(QPixmap::fromImage(image).scaled(150,100,Qt::KeepAspectRatio));
     l_lay->addWidget(l_lbl);
     l_lbl->setUserData(0, (QObjectUserData *)new QImage(newImage));
     QObject::connect(l_lbl, SIGNAL(clicked()), this, SLOT(onshotPreview_clicked()));
@@ -521,6 +533,12 @@ void RFBSS::onshotPreview_clicked()
         setImage(*l_imgPtr,false);
     }
 }
+
+//void RFBSS::adaptScaleToShownFullImage()
+//         int l_scrAreaW = scrollArea->width();
+  //          int l_imgLblW = imageLabel-
+
+//}
 
 #if 0
 
