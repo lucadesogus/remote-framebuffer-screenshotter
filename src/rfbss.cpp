@@ -354,13 +354,13 @@ void RFBSS::fitToWindow()
 
 void RFBSS::about()
 {
-    QMessageBox::about(this, tr("About Giorgio ScreenShotter"),
-        tr("<p><b>Giorgio ScreenShotter</b> is Freeware, and as such, you should not have been charged to obtain this software</p>"
+    QMessageBox::about(this, tr("About RemoteFrameBufferScreenShotter"),
+        tr("<p><b>RemoteFrameBufferScreenShotter</b> is Freeware, and as such, you should not have been charged to obtain this software</p>"
 
-        "<p>You may redistribute Giorgio ScreenShotter as long as it is not modified in any way.</p>"
+        "<p>You may redistribute RemoteFrameBufferScreenShotter as long as it is not modified in any way.</p>"
         "<p>The author accepts no responsibility for damages resulting from the use of this product and makes no warranty or representation, either express or implied, including but not limited to, any implied warranty of merchantability or fitness for a particular purpose.</p>"
         "<p>This software is provided \"AS IS\", and you, its user, assume all risks when using it.</p>"
-        "<p>Author: Luca Desogus  &lt;luca.desogus@bithiatec.com&gt;"
+        "<p>Author: Luca Desogus  &lt;luca.desogus@outlook.com&gt;"
         "</p>"));
 }
 
@@ -463,7 +463,7 @@ void RFBSS::adjustScrollBar(QScrollBar *scrollBar, double factor)
 
 void RFBSS::onTakeSnapShot_clicked()
 {
-    QString l_cmd("cat /dev/fb1");
+    QString l_cmd("cat /dev/fb0");
     QByteArray l_result;
     send_remote_command(m_con, l_cmd, l_result);
     //QImage l_img((unsigned char *)l_result.data_ptr(), 1280, 480, QImage::Format_RGB32);// = QImage::fromData(l_result);
