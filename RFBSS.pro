@@ -11,6 +11,8 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = RFBSS
 TEMPLATE = app
 
+CONFIG += c++11
+
 win32:CONFIG(debug, debug|release) DESTDIR = $$PWD/build/win/debug
 win32:CONFIG(release, debug|release) DESTDIR = $$PWD/build/win/release
 
