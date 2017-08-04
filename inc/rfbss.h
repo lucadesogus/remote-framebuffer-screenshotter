@@ -36,7 +36,9 @@ private:
 
     ssh_session  m_con;
     int send_remote_command(ssh_session session, QString &, QByteArray & p_result);
-
+    void initialChecks();
+    void loadProfiles();
+    void loadProfile(const QString & p_name);
     void createActions();
     void createMenus();
     void updateActions();
@@ -45,6 +47,7 @@ private:
     void scaleImage(double factor);
     void adjustScrollBar(QScrollBar *scrollBar, double factor);
     void appendToImageList(const QImage &newImage);
+    bool fileExists(QString path);
     QImage image;
     QLabel *imageLabel;
     QScrollArea *scrollArea;

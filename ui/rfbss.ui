@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>473</width>
-    <height>675</height>
+    <width>650</width>
+    <height>677</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -27,7 +27,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>473</width>
+     <width>650</width>
      <height>21</height>
     </rect>
    </property>
@@ -37,7 +37,7 @@
     <enum>TopToolBarArea</enum>
    </attribute>
    <attribute name="toolBarBreak">
-    <bool>true</bool>
+    <bool>false</bool>
    </attribute>
    <addaction name="actionConnect"/>
    <addaction name="actionCapture_FB"/>
@@ -45,7 +45,7 @@
   <widget class="QStatusBar" name="statusBar"/>
   <widget class="QDockWidget" name="dockWidget">
    <property name="sizePolicy">
-    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
      <horstretch>0</horstretch>
      <verstretch>0</verstretch>
     </sizepolicy>
@@ -59,7 +59,7 @@
    <property name="maximumSize">
     <size>
      <width>524287</width>
-     <height>130</height>
+     <height>181</height>
     </size>
    </property>
    <property name="layoutDirection">
@@ -296,7 +296,7 @@ color:white;</string>
                   </widget>
                  </item>
                  <item row="0" column="1">
-                  <widget class="QCheckBox" name="checkBox">
+                  <widget class="QCheckBox" name="chkBoxAutodetectWH">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                      <horstretch>0</horstretch>
@@ -601,7 +601,7 @@ color:white;</string>
           <x>0</x>
           <y>0</y>
           <width>168</width>
-          <height>405</height>
+          <height>407</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -654,7 +654,7 @@ color:white;</string>
         <number>0</number>
        </property>
        <item>
-        <widget class="QListWidget" name="listWidget">
+        <widget class="QListWidget" name="listProfiles">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
            <horstretch>0</horstretch>

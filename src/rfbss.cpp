@@ -8,6 +8,9 @@
 #include <QtWidgets>
 #include "clickable_label.h"
 
+#include <QSettings>
+#include <algorithm>
+
 RFBSS::RFBSS(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::RFBSS),
@@ -62,12 +65,70 @@ RFBSS::RFBSS(QWidget *parent) :
 
     createActions();
 
-    resize(QGuiApplication::primaryScreen()->availableSize());// * 3 / 5);
+   // resize(QGuiApplication::primaryScreen()->availableSize());// * 3 / 5);
+    showMaximized();
+
+    initialChecks();
+    loadProfiles();
 }
 
 RFBSS::~RFBSS()
 {
     delete ui;
+}
+
+void RFBSS::initialChecks()
+{
+    //check if profiles folder exists, else create it with default profile default.profile
+    QDir dir("profiles");
+    if (!dir.exists()) {
+        dir.mkpath(".");
+    }
+    if(!fileExists("profiles/default.profile"))
+    {
+        QSettings l_prof(QApplication::applicationDirPath() + "/profiles/default.profile", QSettings::IniFormat);
+        //QString l_s (QApplication::applicationDirPath() + "/profiles/default.profile");
+        l_prof.setValue("ip", "0.0.0.0");
+        l_prof.setValue("port", 22);
+        l_prof.setValue("username", "root");
+        l_prof.setValue("password", "root");
+        l_prof.setValue("FB", 0);
+        l_prof.setValue("type", 0);
+        l_prof.setValue("width", 620);
+        l_prof.setValue("height", 480);
+        l_prof.setValue("autodetect_wh", false);
+        l_prof.setValue("autodetect_FB", 0);
+        l_prof.sync();
+    }
+}
+
+void RFBSS::loadProfiles()
+{
+ QDir dir("profiles");
+ QStringList l_list = dir.entryList(QDir::Files);
+ l_list.erase(std::remove_if(l_list.begin(),
+                           l_list.end(),
+                           []( QString  x){return !x.endsWith(".profile");}),
+            l_list.end());
+
+ ui->listProfiles->addItems(l_list);
+
+ loadProfile("default");
+}
+
+void RFBSS::loadProfile(const QString & p_name)
+{
+    QSettings l_profile (QApplication::applicationDirPath() + "/profiles/"+ p_name+ ".profile", QSettings::NativeFormat);
+    ui->txt_host->setText(l_profile.value("ip", "0.0.0.0").toString());
+    ui->txt_port->setText(QString::number(l_profile.value("port", 22).toInt()));
+    ui->txt_user->setText(l_profile.value("username", "root").toString());
+    ui->txt_pw->setText(l_profile.value("password", "root").toString());
+    ui->spnBox_FBnum->setValue(l_profile.value("FB", 0).toInt());
+    ui->cmbBoxBufType->setCurrentIndex(l_profile.value("type", 0).toInt());
+    ui->spnBoxWidth->setValue(l_profile.value("width", 620).toInt());
+    ui->spnBoxHeight->setValue(l_profile.value("height", 480).toInt());
+    ui->chkBoxAutodetectWH->setChecked(l_profile.value("autodetect_wh", false).toBool());
+    ui->spnBox_FB_autodetectWH->setValue(l_profile.value("autodetect_FB", 0).toInt());
 }
 
 
@@ -534,11 +595,23 @@ void RFBSS::onshotPreview_clicked()
     }
 }
 
+bool RFBSS::fileExists(QString path) {
+    QFileInfo check_file(path);
+    // check if file exists and if yes: Is it really a file and no directory?
+    if (check_file.exists() && check_file.isFile()) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 //void RFBSS::adaptScaleToShownFullImage()
 //         int l_scrAreaW = scrollArea->width();
   //          int l_imgLblW = imageLabel-
 
 //}
+
+
 
 #if 0
 
