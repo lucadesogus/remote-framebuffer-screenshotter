@@ -62,7 +62,7 @@ RFBSS::RFBSS(QWidget *parent) :
 
     createActions();
 
-    resize(QGuiApplication::primaryScreen()->availableSize() * 3 / 5);
+    resize(QGuiApplication::primaryScreen()->availableSize());// * 3 / 5);
 }
 
 RFBSS::~RFBSS()
@@ -463,7 +463,7 @@ void RFBSS::adjustScrollBar(QScrollBar *scrollBar, double factor)
 
 void RFBSS::onTakeSnapShot_clicked()
 {
-    QString l_cmd("cat /dev/fb0");
+    QString l_cmd("cat /dev/fb" + QString::number(ui->spnBox_FBnum->value()));
     QByteArray l_result;
     send_remote_command(m_con, l_cmd, l_result);
     //QImage l_img((unsigned char *)l_result.data_ptr(), 1280, 480, QImage::Format_RGB32);// = QImage::fromData(l_result);
