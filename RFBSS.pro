@@ -40,6 +40,9 @@ HEADERS += \
 FORMS += \
         ./ui/rfbss.ui
 
+RESOURCES += \
+    ./resources.qrc
+
 #libssh.lib/.a link, folder path may differs
 win32:CONFIG(release, debug|release) LIBS += -L"lib/bin/win" -lssh
 else:win32:CONFIG(debug, debug|release) LIBS += -L"lib/bin/win" -lssh
@@ -48,5 +51,7 @@ else:unix:CONFIG(debug, debug|release) LIBS += -L"/usr/local/lib" -lssh
 
 #win32:CONFIG(release, debug|release) LIBS += $$quote(C:/Program Files (x86)/Microsoft SDKs/Windows/v7.1A/Lib/WS2_32.lib)
 #else:win32:CONFIG(debug, debug|release) LIBS += $$quote(C:/Program Files (x86)/Microsoft SDKs/Windows/v7.1A/Lib/WS2_32.lib)
+
+
 
 

@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/ui/icons">
+        <file>ui/icons/connection.png</file>
+        <file>ui/icons/screenshot.png</file>
+    </qresource>
+</RCC>

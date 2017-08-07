@@ -10,6 +10,7 @@
 
 #include <QSettings>
 #include <algorithm>
+#include <thread>
 
 RFBSS::RFBSS(QWidget *parent) :
     QMainWindow(parent),
@@ -19,9 +20,16 @@ RFBSS::RFBSS(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    QObject::connect(ui->btn_connect, SIGNAL(clicked()), this, SLOT(onConnect_clicked()));
-    QObject::connect(ui->btn_takeSnapshot, SIGNAL(clicked()), this, SLOT(onTakeSnapShot_clicked()));
-//	imageLabel = ui->imglabel;
+    QObject::connect(ui->actionConnect, SIGNAL(triggered()), this, SLOT(onConnect_clicked()));
+    QObject::connect(ui->actionCapture_FB, SIGNAL(triggered()), this, SLOT(onTakeSnapShot_clicked()));
+    QObject::connect(this, SIGNAL(LogResult(QString)), this, SLOT(onLogResult_received(QString)));
+    QObject::connect(this, SIGNAL(setImageSignal(QImage,bool)), this, SLOT(setImage(const QImage &,const bool &)));
+    QObject::connect(this,SIGNAL(ShowMessageBox(int,QString,QString)),this,SLOT(onShowMessageBox_received(int,QString,QString)));
+    QObject::connect(ui->btnLoadProfile,SIGNAL(clicked()),this,SLOT(onLoadProfile_clicked()));
+    QObject::connect(ui->btnSaveProfile,SIGNAL(clicked()),this,SLOT(onSaveProfile_clicked()));
+    QObject::connect(ui->btnNewProfile,SIGNAL(clicked()),this,SLOT(onNewProfile_clicked()));
+
+     //	imageLabel = ui->imglabel;
     imageLabel = new QLabel;
     imageLabel->setBackgroundRole(QPalette::Base);
     imageLabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
@@ -111,14 +119,18 @@ void RFBSS::loadProfiles()
                            []( QString  x){return !x.endsWith(".profile");}),
             l_list.end());
 
- ui->listProfiles->addItems(l_list);
+ QStringList l_finalList;
+ for ( const QString & l_item: l_list)
+    l_finalList.append(l_item.mid(0,l_item.lastIndexOf('.')));
+
+ ui->listProfiles->addItems(l_finalList);
 
  loadProfile("default");
 }
 
 void RFBSS::loadProfile(const QString & p_name)
 {
-    QSettings l_profile (QApplication::applicationDirPath() + "/profiles/"+ p_name+ ".profile", QSettings::NativeFormat);
+    QSettings l_profile (QApplication::applicationDirPath() + "/profiles/"+ p_name+ ".profile", QSettings::IniFormat);
     ui->txt_host->setText(l_profile.value("ip", "0.0.0.0").toString());
     ui->txt_port->setText(QString::number(l_profile.value("port", 22).toInt()));
     ui->txt_user->setText(l_profile.value("username", "root").toString());
@@ -181,42 +193,51 @@ int RFBSS::send_remote_command(ssh_session session, QString & p_command ,QByteAr
 void RFBSS::onConnect_clicked()
 {
     qDebug() << "onConnect_clicked \n";
+    std::thread (Connect,this).detach();
+}
+
+void  RFBSS::Connect(RFBSS * p_parent)
+{
+    qDebug() << "Connect \n";
     int rc;
     char *password;
-    int port = ui->txt_port->text().toInt();
+    int port = p_parent->ui->txt_port->text().toInt();
     int verbosity = SSH_LOG_PROTOCOL;
-    m_con = ssh_new();
-    if (m_con == NULL)
+    p_parent->m_con = ssh_new();
+    if (p_parent->m_con == NULL)
     {
-        ui->txt_result->appendHtml("NULL connection object. \n");
+        emit p_parent->LogResult("NULL connection object. \n");
+        //ui->txt_result->appendHtml("NULL connection object. \n");
         return;
     }
-    ssh_options_set(m_con, SSH_OPTIONS_HOST, ui->txt_host->text().toStdString().c_str());
-    ssh_options_set(m_con, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
-    ssh_options_set(m_con, SSH_OPTIONS_PORT, &port);
+    ssh_options_set(p_parent->m_con, SSH_OPTIONS_HOST, p_parent->ui->txt_host->text().toStdString().c_str());
+    ssh_options_set(p_parent->m_con, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
+    ssh_options_set(p_parent->m_con, SSH_OPTIONS_PORT, &port);
     // Connect to server
-    rc = ssh_connect(m_con);
+    rc = ssh_connect(p_parent->m_con);
     if (rc != SSH_OK)
     {
         //fprintf(stderr, "Error connecting to localhost: %s\n",
         //ssh_get_error(m_con));
-        ui->txt_result->appendHtml("Error: " + QString::fromLatin1(ssh_get_error(m_con)) + " \n");
+        //ui->txt_result->appendHtml("Error: " + QString::fromLatin1(ssh_get_error(m_con)) + " \n");
+        emit p_parent->LogResult("Error: " + QString::fromLatin1(ssh_get_error(p_parent->m_con)) + " \n");
         //const char * l = ssh_get_error(m_con);
-        ssh_free(m_con);
+        ssh_free(p_parent->m_con);
         return;
         //exit(-1);
     }
 
-    rc = ssh_userauth_password(m_con,
-        ui->txt_user->text().toStdString().c_str(),
-        ui->txt_pw->text().toStdString().c_str()
+    rc = ssh_userauth_password(p_parent->m_con,
+        p_parent->ui->txt_user->text().toStdString().c_str(),
+       p_parent-> ui->txt_pw->text().toStdString().c_str()
         );
     if (rc != SSH_AUTH_SUCCESS)
     {
         //fprintf(stderr, "Authentication failed: %s\n",
         //	ssh_get_error(m_con));
-        ui->txt_result->appendHtml("Authentication failed: " + QString::fromLatin1(ssh_get_error(m_con)) + " \n");
-        ssh_free(m_con);
+        emit p_parent->LogResult("Authentication failed: " + QString::fromLatin1(ssh_get_error(p_parent->m_con)) + " \n");
+        //ui->txt_result->appendHtml("Authentication failed: " + QString::fromLatin1(ssh_get_error(m_con)) + " \n");
+        ssh_free(p_parent->m_con);
         return;
         //exit(-1);
     }
@@ -224,7 +245,8 @@ void RFBSS::onConnect_clicked()
     {
 
         //fprintf(stderr,"Authentication OK ");
-        ui->txt_result->appendHtml("Connected. \n");
+        emit p_parent->LogResult("Connected. \n");
+       // ui->txt_result->appendHtml("Connected. \n");
     }
 }
 
@@ -524,9 +546,16 @@ void RFBSS::adjustScrollBar(QScrollBar *scrollBar, double factor)
 
 void RFBSS::onTakeSnapShot_clicked()
 {
-    QString l_cmd("cat /dev/fb" + QString::number(ui->spnBox_FBnum->value()));
+    qDebug() << "onTakeSnapShot_clicked \n";
+    std::thread (TakeSnapshot,this).detach();
+}
+
+void RFBSS::TakeSnapshot(RFBSS * p_parent)
+{
+    qDebug() << "TakeSnapshot \n";
+    QString l_cmd("cat /dev/fb" + QString::number(p_parent->ui->spnBox_FBnum->value()));
     QByteArray l_result;
-    send_remote_command(m_con, l_cmd, l_result);
+    p_parent->send_remote_command(p_parent->m_con, l_cmd, l_result);
     //QImage l_img((unsigned char *)l_result.data_ptr(), 1280, 480, QImage::Format_RGB32);// = QImage::fromData(l_result);
     /*
     QImage image(1280, 480, QImage::Format_RGB32);
@@ -542,7 +571,7 @@ void RFBSS::onTakeSnapShot_clicked()
         }
     }
     */
-    int l_itemIndex = ui->cmbBoxBufType->currentIndex();
+    int l_itemIndex = p_parent->ui->cmbBoxBufType->currentIndex();
     if (l_itemIndex == -1)
     {
         qDebug() << "cmbBox index not found";
@@ -550,13 +579,13 @@ void RFBSS::onTakeSnapShot_clicked()
     }
     if (l_result.isEmpty())
     {
-        QMessageBox::warning(this, QGuiApplication::applicationDisplayName(),
-            tr("1) Connect.\n2) Capture."));
+        emit p_parent->ShowMessageBox(QMessageBox::Warning,QGuiApplication::applicationDisplayName(),
+                           tr("1) Connect.\n2) Capture.") );
         return;
     }
-    QImage::Format l_imgFormat = (QImage::Format)ui->cmbBoxBufType->itemData(l_itemIndex).toInt();
-    int l_w = ui->spnBoxWidth->value();
-    int l_h = ui->spnBoxHeight->value();
+    QImage::Format l_imgFormat = (QImage::Format)p_parent->ui->cmbBoxBufType->itemData(l_itemIndex).toInt();
+    int l_w = p_parent->ui->spnBoxWidth->value();
+    int l_h =p_parent-> ui->spnBoxHeight->value();
     QImage l_image(l_w, l_h, l_imgFormat);
     qDebug() << "image size = " << QString::number(l_image.byteCount()) << "\n";
     unsigned char * l_ptr = l_image.bits();
@@ -564,7 +593,7 @@ void RFBSS::onTakeSnapShot_clicked()
     {
         l_ptr[j] = l_result.at(j);
     }
-    setImage(l_image);
+    emit p_parent->setImageSignal(l_image,true);
     //imageLabel->setPixmap(QPixmap::fromImage(image));
 
     qDebug() << "result size = " << QString::number(l_result.size()) << "depth = " << QString::number(l_result.size() / (640 * 480)) << "\n";
@@ -610,6 +639,72 @@ bool RFBSS::fileExists(QString path) {
   //          int l_imgLblW = imageLabel-
 
 //}
+
+void RFBSS::onLogResult_received(QString l_string)
+{
+    ui->txt_result->appendHtml(l_string);
+}
+
+
+void RFBSS::onShowMessageBox_received(int p_type, QString p_title, QString p_message)
+{
+    switch (p_type) {
+    case QMessageBox::Warning:
+    {
+        QMessageBox::warning(this, p_title, p_message);
+    }
+        break;
+    default:
+    {
+        QMessageBox::information(this, p_title, p_message);
+    }
+        break;
+    }
+
+}
+
+void RFBSS::onNewProfile_clicked()
+{
+
+}
+
+void RFBSS::onLoadProfile_clicked()
+{
+    if(ui->listProfiles->currentItem() != NULL)
+    {
+         QString l_item = ui->listProfiles->currentItem()->text();
+         loadProfile(l_item);
+    }
+    else
+    {
+        emit LogResult("Select profile.");
+    }
+
+}
+
+void RFBSS::onSaveProfile_clicked()
+{
+    if(ui->listProfiles->currentItem() != NULL)
+    {
+         QString l_item = ui->listProfiles->currentItem()->text();
+         QSettings l_prof(QApplication::applicationDirPath() + "/profiles/" + l_item +".profile", QSettings::IniFormat);
+         l_prof.setValue("ip", ui->txt_host->text());
+         l_prof.setValue("port", ui->txt_port->text());
+         l_prof.setValue("username", ui->txt_user->text());
+         l_prof.setValue("password", ui->txt_pw->text());
+         l_prof.setValue("FB", ui->spnBox_FBnum->value());
+         l_prof.setValue("type", ui->cmbBoxBufType->currentIndex());
+         l_prof.setValue("width", ui->spnBoxWidth->value());
+         l_prof.setValue("height", ui->spnBoxHeight->value());
+         l_prof.setValue("autodetect_wh", ui->chkBoxAutodetectWH->isChecked());
+         l_prof.setValue("autodetect_FB", ui->spnBox_FB_autodetectWH->value());
+         l_prof.sync();
+    }
+    else
+    {
+        emit LogResult("Select profile.");
+    }
+}
 
 
 
