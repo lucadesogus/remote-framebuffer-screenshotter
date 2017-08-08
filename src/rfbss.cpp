@@ -29,6 +29,8 @@ RFBSS::RFBSS(QWidget *parent) :
     QObject::connect(ui->btnSaveProfile,SIGNAL(clicked()),this,SLOT(onSaveProfile_clicked()));
     QObject::connect(ui->btnNewProfile,SIGNAL(clicked()),this,SLOT(onNewProfile_clicked()));
 
+    QObject::connect(this,SIGNAL(DetectedWidthHeight(int,int)),this,SLOT(onDetectedWidthHeight_received(int,int)));
+
      //	imageLabel = ui->imglabel;
     imageLabel = new QLabel;
     imageLabel->setBackgroundRole(QPalette::Base);
@@ -110,7 +112,7 @@ void RFBSS::initialChecks()
     }
 }
 
-void RFBSS::loadProfiles()
+void RFBSS::loadProfiles(const QString & p_sel)
 {
  QDir dir("profiles");
  QStringList l_list = dir.entryList(QDir::Files);
@@ -122,10 +124,10 @@ void RFBSS::loadProfiles()
  QStringList l_finalList;
  for ( const QString & l_item: l_list)
     l_finalList.append(l_item.mid(0,l_item.lastIndexOf('.')));
-
+ui->listProfiles->clear();
  ui->listProfiles->addItems(l_finalList);
 
- loadProfile("default");
+ loadProfile(p_sel);
 }
 
 void RFBSS::loadProfile(const QString & p_name)
@@ -247,6 +249,28 @@ void  RFBSS::Connect(RFBSS * p_parent)
         //fprintf(stderr,"Authentication OK ");
         emit p_parent->LogResult("Connected. \n");
        // ui->txt_result->appendHtml("Connected. \n");
+
+        if(p_parent->ui->chkBoxAutodetectWH->isChecked())
+        {
+            //detect w and h
+            int l_fbd = p_parent->ui->spnBox_FB_autodetectWH->value();
+            QString l_cmd("cat /sys/class/graphics/fb"+
+                          QString::number(l_fbd)+
+                          "/virtual_size");
+            QByteArray l_res;
+            if(0 == p_parent->send_remote_command(p_parent->m_con,l_cmd,l_res))
+            {
+                QString l_str(l_res);
+                QStringList l_wh = l_str.split(',');
+                if(l_wh.size() == 2)
+                {
+                    int l_detW = l_wh.first().toInt();
+                    int l_detH = l_wh.back().toInt();
+                    emit p_parent->LogResult("Detected FB"+ QString::number(l_fbd) + " res.: "+ l_str.replace(",","x"));
+                    emit p_parent->DetectedWidthHeight(l_detW,l_detH);
+                }
+            }
+        }
     }
 }
 
@@ -665,6 +689,30 @@ void RFBSS::onShowMessageBox_received(int p_type, QString p_title, QString p_mes
 
 void RFBSS::onNewProfile_clicked()
 {
+    QDir dir("profiles");
+    QStringList l_list = dir.entryList(QDir::Files);
+    QString l_newItem ("new");
+    int l_counter = 0;
+    while(std::find(l_list.begin(),l_list.end(),l_newItem + ".profile") != l_list.end())
+    {
+        l_counter ++;
+        l_newItem = "new_" + QString::number(l_counter);
+    }
+
+    QSettings l_prof(QApplication::applicationDirPath() + "/profiles/" + l_newItem +".profile", QSettings::IniFormat);
+    l_prof.setValue("ip", ui->txt_host->text());
+    l_prof.setValue("port", ui->txt_port->text());
+    l_prof.setValue("username", ui->txt_user->text());
+    l_prof.setValue("password", ui->txt_pw->text());
+    l_prof.setValue("FB", ui->spnBox_FBnum->value());
+    l_prof.setValue("type", ui->cmbBoxBufType->currentIndex());
+    l_prof.setValue("width", ui->spnBoxWidth->value());
+    l_prof.setValue("height", ui->spnBoxHeight->value());
+    l_prof.setValue("autodetect_wh", ui->chkBoxAutodetectWH->isChecked());
+    l_prof.setValue("autodetect_FB", ui->spnBox_FB_autodetectWH->value());
+    l_prof.sync();
+
+    loadProfiles(l_newItem);
 
 }
 
@@ -704,6 +752,12 @@ void RFBSS::onSaveProfile_clicked()
     {
         emit LogResult("Select profile.");
     }
+}
+
+void RFBSS::onDetectedWidthHeight_received(int p_w,int p_h)
+{
+    ui->spnBoxWidth->setValue(p_w);
+    ui->spnBoxHeight->setValue(p_h);
 }
 
 

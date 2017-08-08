@@ -37,7 +37,7 @@ private:
     ssh_session  m_con;
     int send_remote_command(ssh_session session, QString &, QByteArray & p_result);
     void initialChecks();
-    void loadProfiles();
+    void loadProfiles(const QString & = QString("default"));
     void loadProfile(const QString & p_name);
     void createActions();
     void createMenus();
@@ -90,6 +90,7 @@ private:
     bool loadFile(const QString &);
     void setImage(const QImage &newImage, const bool &  appendToList = true);
     void onShowMessageBox_received(int p_type, QString p_title, QString p_message) ;
+    void onDetectedWidthHeight_received(int,int);
 
     void onNewProfile_clicked();
     void onLoadProfile_clicked();
@@ -99,6 +100,7 @@ signals:
     void LogResult( QString);
     void setImageSignal(QImage,bool);
     void ShowMessageBox(int,QString,QString);
+    void DetectedWidthHeight(int,int);
 };
 
 #endif // RFBSS_H
