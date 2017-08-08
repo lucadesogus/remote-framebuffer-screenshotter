@@ -31,6 +31,8 @@ RFBSS::RFBSS(QWidget *parent) :
 
     QObject::connect(this,SIGNAL(DetectedWidthHeight(int,int)),this,SLOT(onDetectedWidthHeight_received(int,int)));
 
+    QObject::connect(this, SIGNAL(ShowStatusbarMessage(QString)), this, SLOT(onShowStatusbarMessage_received(QString)));
+
      //	imageLabel = ui->imglabel;
     imageLabel = new QLabel;
     imageLabel->setBackgroundRole(QPalette::Base);
@@ -71,6 +73,10 @@ RFBSS::RFBSS(QWidget *parent) :
     l_cmbBox->addItem("RGBA 8888 Premultiplied", QImage::Format_RGBA8888_Premultiplied);
     l_cmbBox->addItem("RGBX 8888", QImage::Format_RGBX8888);
 
+
+    l_cmbBox = ui->cmbBoxAutosaveFormat;
+    l_cmbBox->addItems(QStringList()<<"jpeg"<< "bmp"<< "png");
+
 //	QObject::connect(l_cmbBox, SIGNAL(currentIndexChanged(int)), this, SLOT(onImageType_changed(int)));
 
     createActions();
@@ -108,7 +114,15 @@ void RFBSS::initialChecks()
         l_prof.setValue("height", 480);
         l_prof.setValue("autodetect_wh", false);
         l_prof.setValue("autodetect_FB", 0);
+        l_prof.setValue("autosave_screenshot", false);
+        l_prof.setValue("autosave_screenshot_format", 0);
         l_prof.sync();
+    }
+
+    //check if screenshots folder exists, else create it
+    QDir dir_ss("screenshots");
+    if (!dir_ss.exists()) {
+        dir_ss.mkpath(".");
     }
 }
 
@@ -152,6 +166,8 @@ void RFBSS::loadProfile(const QString & p_name)
     ui->spnBoxHeight->setValue(l_profile.value("height", 480).toInt());
     ui->chkBoxAutodetectWH->setChecked(l_profile.value("autodetect_wh", false).toBool());
     ui->spnBox_FB_autodetectWH->setValue(l_profile.value("autodetect_FB", 0).toInt());
+    ui->chkBoxAutosaveScreenshot->setChecked(l_profile.value("autosave_screenshot", false).toBool());
+    ui->cmbBoxAutosaveFormat->setCurrentIndex(l_profile.value("autosave_screenshot_format", 0).toInt());
 }
 
 
@@ -339,13 +355,17 @@ bool RFBSS::saveFile(const QString &fileName)
     QImageWriter writer(fileName);
 
     if (!writer.write(image)) {
-        QMessageBox::information(this, QGuiApplication::applicationDisplayName(),
-            tr("Cannot write %1: %2")
-            .arg(QDir::toNativeSeparators(fileName)), writer.errorString());
+        emit ShowMessageBox(QMessageBox::Information,
+                            QGuiApplication::applicationDisplayName(),
+                            "Cannot write "+ QDir::toNativeSeparators(fileName) + " :" +writer.errorString());
+        //QMessageBox::information(this, QGuiApplication::applicationDisplayName(),
+         //   tr("Cannot write %1: %2")
+         //   .arg(QDir::toNativeSeparators(fileName)), writer.errorString());
         return false;
     }
     const QString message = tr("Wrote \"%1\"").arg(QDir::toNativeSeparators(fileName));
-    statusBar()->showMessage(message);
+    emit ShowStatusbarMessage(message);
+   // statusBar()->showMessage(message);
     return true;
 }
 
@@ -631,6 +651,11 @@ void RFBSS::TakeSnapshot(RFBSS * p_parent)
 
     qDebug() << "result size = " << QString::number(l_result.size()) << "depth = " << QString::number(l_result.size() / (640 * 480)) << "\n";
 
+    if(p_parent->ui->chkBoxAutosaveScreenshot->isChecked())
+    {
+       QString l_filename = QApplication::applicationDirPath() + "/screenshots/" + QDateTime::currentDateTime().toString("yyyyMMdd_HHmmsszzz.") + p_parent->ui->cmbBoxAutosaveFormat->currentText();
+        p_parent->saveFile(l_filename);
+    }
 }
 
 void RFBSS::appendToImageList(const QImage &newImage)
@@ -719,6 +744,8 @@ void RFBSS::onNewProfile_clicked()
     l_prof.setValue("height", ui->spnBoxHeight->value());
     l_prof.setValue("autodetect_wh", ui->chkBoxAutodetectWH->isChecked());
     l_prof.setValue("autodetect_FB", ui->spnBox_FB_autodetectWH->value());
+    l_prof.setValue("autosave_screenshot", ui->chkBoxAutosaveScreenshot->isChecked());
+    l_prof.setValue("autosave_screenshot_format", ui->cmbBoxAutosaveFormat->currentIndex());
     l_prof.sync();
 
     loadProfiles(l_newItem);
@@ -755,6 +782,8 @@ void RFBSS::onSaveProfile_clicked()
          l_prof.setValue("height", ui->spnBoxHeight->value());
          l_prof.setValue("autodetect_wh", ui->chkBoxAutodetectWH->isChecked());
          l_prof.setValue("autodetect_FB", ui->spnBox_FB_autodetectWH->value());
+         l_prof.setValue("autosave_screenshot", ui->chkBoxAutosaveScreenshot->isChecked());
+         l_prof.setValue("autosave_screenshot_format", ui->cmbBoxAutosaveFormat->currentIndex());
          l_prof.sync();
     }
     else
@@ -767,6 +796,11 @@ void RFBSS::onDetectedWidthHeight_received(int p_w,int p_h)
 {
     ui->spnBoxWidth->setValue(p_w);
     ui->spnBoxHeight->setValue(p_h);
+}
+
+void RFBSS::onShowStatusbarMessage_received(QString p_m)
+{
+    statusBar()->showMessage(p_m);
 }
 
 

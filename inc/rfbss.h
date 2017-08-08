@@ -91,6 +91,7 @@ private:
     void setImage(const QImage &newImage, const bool &  appendToList = true);
     void onShowMessageBox_received(int p_type, QString p_title, QString p_message) ;
     void onDetectedWidthHeight_received(int,int);
+    void onShowStatusbarMessage_received(QString);
 
     void onNewProfile_clicked();
     void onLoadProfile_clicked();
@@ -101,6 +102,7 @@ signals:
     void setImageSignal(QImage,bool);
     void ShowMessageBox(int,QString,QString);
     void DetectedWidthHeight(int,int);
+    void ShowStatusbarMessage(QString);
 };
 
 #endif // RFBSS_H
