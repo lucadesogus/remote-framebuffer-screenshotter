@@ -128,6 +128,15 @@ ui->listProfiles->clear();
  ui->listProfiles->addItems(l_finalList);
 
  loadProfile(p_sel);
+ for(auto x = 0; x != l_finalList.size() ;++x)
+ {
+     if(l_finalList.at(x) == p_sel)
+     {
+         ui->listProfiles->setItemSelected(ui->listProfiles->item(x),true);
+         break;
+     }
+ }
+
 }
 
 void RFBSS::loadProfile(const QString & p_name)
