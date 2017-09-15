@@ -261,6 +261,7 @@ void  RFBSS::Connect(RFBSS * p_parent)
     {
         emit p_parent->LogResult("NULL connection object. \n");
         //ui->txt_result->appendHtml("NULL connection object. \n");
+         emit p_parent->ConnectionStatus(conn_status::DISCONNECTED);
          p_parent->m_conn_status_mutex.unlock();
         return;
     }
@@ -277,6 +278,7 @@ void  RFBSS::Connect(RFBSS * p_parent)
         emit p_parent->LogResult("Error: " + QString::fromLatin1(ssh_get_error(p_parent->m_con)) + " \n");
         //const char * l = ssh_get_error(m_con);
         ssh_free(p_parent->m_con);
+        emit p_parent->ConnectionStatus(conn_status::DISCONNECTED);
         p_parent->m_conn_status_mutex.unlock();
         return;
         //exit(-1);
@@ -293,6 +295,7 @@ void  RFBSS::Connect(RFBSS * p_parent)
         emit p_parent->LogResult("Authentication failed: " + QString::fromLatin1(ssh_get_error(p_parent->m_con)) + " \n");
         //ui->txt_result->appendHtml("Authentication failed: " + QString::fromLatin1(ssh_get_error(m_con)) + " \n");
         ssh_free(p_parent->m_con);
+         emit p_parent->ConnectionStatus(conn_status::DISCONNECTED);
         p_parent->m_conn_status_mutex.unlock();
         return;
         //exit(-1);
