@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>650</width>
-    <height>677</height>
+    <height>733</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -33,13 +33,18 @@
    </property>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
+   <property name="iconSize">
+    <size>
+     <width>30</width>
+     <height>30</height>
+    </size>
+   </property>
    <attribute name="toolBarArea">
     <enum>TopToolBarArea</enum>
    </attribute>
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="actionConnect"/>
    <addaction name="actionCapture_FB"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
@@ -112,7 +117,7 @@ color:white;</string>
    <property name="minimumSize">
     <size>
      <width>222</width>
-     <height>428</height>
+     <height>476</height>
     </size>
    </property>
    <property name="maximumSize">
@@ -489,6 +494,44 @@ color:white;</string>
          </layout>
         </widget>
        </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="lbl_ledConnStatus">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lbl_connStatus">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Not Connected</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QVBoxLayout" name="verticalLayout_9">
+           <item>
+            <widget class="QPushButton" name="btnConnectSSH">
+             <property name="text">
+              <string>Connect</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </item>
       </layout>
      </item>
      <item>
@@ -531,6 +574,13 @@ color:white;</string>
             </property>
            </widget>
           </item>
+          <item row="0" column="1">
+           <widget class="QCheckBox" name="chkBoxAutosaveScreenshot">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
           <item row="1" column="0">
            <widget class="QLabel" name="label_14">
             <property name="text">
@@ -540,13 +590,6 @@ color:white;</string>
           </item>
           <item row="1" column="1">
            <widget class="QComboBox" name="cmbBoxAutosaveFormat"/>
-          </item>
-          <item row="0" column="1">
-           <widget class="QCheckBox" name="chkBoxAutosaveScreenshot">
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
           </item>
           <item row="2" column="0" colspan="2">
            <spacer name="verticalSpacer_2">
@@ -646,7 +689,7 @@ color:white;</string>
           <x>0</x>
           <y>0</y>
           <width>168</width>
-          <height>396</height>
+          <height>446</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -766,21 +809,6 @@ color:white;</string>
    </property>
    <property name="shortcut">
     <string>F5</string>
-   </property>
-  </action>
-  <action name="actionConnect">
-   <property name="icon">
-    <iconset resource="../resources.qrc">
-     <normaloff>:/ui/icons/ui/icons/connection.png</normaloff>:/ui/icons/ui/icons/connection.png</iconset>
-   </property>
-   <property name="text">
-    <string>Connect</string>
-   </property>
-   <property name="toolTip">
-    <string>Connect</string>
-   </property>
-   <property name="shortcut">
-    <string>F4</string>
    </property>
   </action>
  </widget>

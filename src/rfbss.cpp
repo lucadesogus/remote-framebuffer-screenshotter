@@ -16,11 +16,12 @@ RFBSS::RFBSS(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::RFBSS),
     m_con(NULL),
-    scaleFactor(1)
+    scaleFactor(1),
+    m_progressBar(NULL)
 {
     ui->setupUi(this);
 
-    QObject::connect(ui->actionConnect, SIGNAL(triggered()), this, SLOT(onConnect_clicked()));
+   // QObject::connect(ui->actionConnect, SIGNAL(triggered()), this, SLOT(onConnect_clicked()));
     QObject::connect(ui->actionCapture_FB, SIGNAL(triggered()), this, SLOT(onTakeSnapShot_clicked()));
     QObject::connect(this, SIGNAL(LogResult(QString)), this, SLOT(onLogResult_received(QString)));
     QObject::connect(this, SIGNAL(setImageSignal(QImage,bool)), this, SLOT(setImage(const QImage &,const bool &)));
@@ -28,10 +29,15 @@ RFBSS::RFBSS(QWidget *parent) :
     QObject::connect(ui->btnLoadProfile,SIGNAL(clicked()),this,SLOT(onLoadProfile_clicked()));
     QObject::connect(ui->btnSaveProfile,SIGNAL(clicked()),this,SLOT(onSaveProfile_clicked()));
     QObject::connect(ui->btnNewProfile,SIGNAL(clicked()),this,SLOT(onNewProfile_clicked()));
+    QObject::connect(ui->btnConnectSSH,SIGNAL(clicked()),this,SLOT(onConnectSSH_clicked()));
 
     QObject::connect(this,SIGNAL(DetectedWidthHeight(int,int)),this,SLOT(onDetectedWidthHeight_received(int,int)));
 
     QObject::connect(this, SIGNAL(ShowStatusbarMessage(QString)), this, SLOT(onShowStatusbarMessage_received(QString)));
+
+     QObject::connect(this, SIGNAL(ConnectionStatus(const conn_status)), this, SLOT(onConnectionStatus_received(const conn_status)));
+
+    QObject::connect(this, SIGNAL(ShowProgressBar(const bool &)), this, SLOT(onShowProgressBar_received(const bool & )));
 
      //	imageLabel = ui->imglabel;
     imageLabel = new QLabel;
@@ -51,6 +57,17 @@ RFBSS::RFBSS(QWidget *parent) :
     //scrollArea->setVisible(false);
 
     setCentralWidget(scrollArea);
+
+    m_progressBar = new QProgressBar(this);
+    m_progressBar->setMaximumHeight(20);
+    m_progressBar->setMaximumWidth(250);
+    m_progressBar->setValue(0);
+    m_progressBar->setMinimum(0);
+    m_progressBar->setMaximum(0);
+    m_progressBar->setWindowFlags( Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+
+    m_progressBar->setStyleSheet("QProgressBar {border: 2px solid grey; border-radius: 5px;}"
+                             "QProgressBar::chunk {background-color: #30729C;width: 25px;}");
 
 
     QComboBox * l_cmbBox = ui->cmbBoxBufType;
@@ -83,7 +100,7 @@ RFBSS::RFBSS(QWidget *parent) :
 
    // resize(QGuiApplication::primaryScreen()->availableSize());// * 3 / 5);
     showMaximized();
-
+    emit ConnectionStatus(conn_status::DISCONNECTED);
     initialChecks();
     loadProfiles();
 }
@@ -173,6 +190,7 @@ void RFBSS::loadProfile(const QString & p_name)
 
 int RFBSS::send_remote_command(ssh_session session, QString & p_command ,QByteArray & p_result)
 {
+    std::lock_guard<std::mutex> l_guard(m_send_cmd_mutex);
     qDebug() << "send_remote_command \n";
     if (session == NULL)
         return -1;
@@ -226,15 +244,24 @@ void RFBSS::onConnect_clicked()
 void  RFBSS::Connect(RFBSS * p_parent)
 {
     qDebug() << "Connect \n";
+    emit p_parent->ConnectionStatus(conn_status::IN_PROGRESS);
+    QThread::msleep(500);
+     p_parent->m_conn_status_mutex.lock();
     int rc;
     char *password;
     int port = p_parent->ui->txt_port->text().toInt();
     int verbosity = SSH_LOG_PROTOCOL;
+    if(p_parent->m_con == NULL)
+    {
+        ssh_free(p_parent->m_con);
+        p_parent->m_con = NULL;
+    }
     p_parent->m_con = ssh_new();
     if (p_parent->m_con == NULL)
     {
         emit p_parent->LogResult("NULL connection object. \n");
         //ui->txt_result->appendHtml("NULL connection object. \n");
+         p_parent->m_conn_status_mutex.unlock();
         return;
     }
     ssh_options_set(p_parent->m_con, SSH_OPTIONS_HOST, p_parent->ui->txt_host->text().toStdString().c_str());
@@ -250,6 +277,7 @@ void  RFBSS::Connect(RFBSS * p_parent)
         emit p_parent->LogResult("Error: " + QString::fromLatin1(ssh_get_error(p_parent->m_con)) + " \n");
         //const char * l = ssh_get_error(m_con);
         ssh_free(p_parent->m_con);
+        p_parent->m_conn_status_mutex.unlock();
         return;
         //exit(-1);
     }
@@ -265,6 +293,7 @@ void  RFBSS::Connect(RFBSS * p_parent)
         emit p_parent->LogResult("Authentication failed: " + QString::fromLatin1(ssh_get_error(p_parent->m_con)) + " \n");
         //ui->txt_result->appendHtml("Authentication failed: " + QString::fromLatin1(ssh_get_error(m_con)) + " \n");
         ssh_free(p_parent->m_con);
+        p_parent->m_conn_status_mutex.unlock();
         return;
         //exit(-1);
     }
@@ -296,7 +325,11 @@ void  RFBSS::Connect(RFBSS * p_parent)
                 }
             }
         }
+        emit p_parent->ConnectionStatus(conn_status::CONNECTED);
+        // thread that check the connection status
+        std::thread (checkConnectionStatus_Thread,p_parent).detach();
     }
+    p_parent->m_conn_status_mutex.unlock();
 }
 
 bool RFBSS::loadFile(const QString &fileName)
@@ -605,10 +638,13 @@ void RFBSS::onTakeSnapShot_clicked()
 
 void RFBSS::TakeSnapshot(RFBSS * p_parent)
 {
+    std::lock_guard<std::mutex> l_guard (p_parent->m_capture_image_mutex);
     qDebug() << "TakeSnapshot \n";
+    emit p_parent->ShowProgressBar(true);
     QString l_cmd("cat /dev/fb" + QString::number(p_parent->ui->spnBox_FBnum->value()));
     QByteArray l_result;
     p_parent->send_remote_command(p_parent->m_con, l_cmd, l_result);
+    emit p_parent->ShowProgressBar(false);
     //QImage l_img((unsigned char *)l_result.data_ptr(), 1280, 480, QImage::Format_RGB32);// = QImage::fromData(l_result);
     /*
     QImage image(1280, 480, QImage::Format_RGB32);
@@ -642,7 +678,7 @@ void RFBSS::TakeSnapshot(RFBSS * p_parent)
     QImage l_image(l_w, l_h, l_imgFormat);
     qDebug() << "image size = " << QString::number(l_image.byteCount()) << "\n";
     unsigned char * l_ptr = l_image.bits();
-    for (unsigned long j = 0; j< l_result.size() && j <l_image.byteCount(); ++j)
+    for (long j = 0; j< l_result.size() && j <l_image.byteCount(); ++j)
     {
         l_ptr[j] = l_result.at(j);
     }
@@ -804,6 +840,122 @@ void RFBSS::onShowStatusbarMessage_received(QString p_m)
 }
 
 
+void RFBSS::checkConnectionStatus_Thread(RFBSS * p_parent)
+{
+    qDebug() << "checkConnectionStatus_Thread launched \n";
+    if(p_parent == NULL)
+    {
+        qWarning() << "checkConnectionStatus_Thread:: p_parent == NULL";
+        return;
+    }
+    for(;;)
+    {
+        p_parent->m_conn_status_mutex.lock();
+        if(p_parent->m_con != NULL)
+        {
+            if(ssh_is_connected(p_parent->m_con))
+            {
+                qDebug() << "checkConnectionStatus_Thread:: ssh is connected \n";
+                QByteArray l_result;
+                QString l_cmd ("echo ping");
+                p_parent->send_remote_command(p_parent->m_con, l_cmd, l_result);
+                if (l_result.isEmpty() || !QString(l_result).startsWith("ping"))
+                {
+                    qDebug() << "checkConnectionStatus_Thread:: disconnession detected \n";
+                    emit p_parent->LogResult("Disconnected. \n");
+                    emit p_parent->ConnectionStatus(conn_status::DISCONNECTED);
+
+                   break;
+                }
+                qDebug() << "checkConnectionStatus_Thread:: ssh is connected \n";
+                p_parent->m_conn_status_mutex.unlock();
+                QThread::msleep(2000);
+            }
+            else
+            {
+                 qDebug() << "checkConnectionStatus_Thread:: disconnession detected \n";
+                break;
+            }
+        }
+        else
+        {
+            qWarning() << "checkConnectionStatus_Thread:: p_parent->m_con == NULL";
+            break;
+        }
+    }
+    p_parent->m_conn_status_mutex.unlock();
+}
+
+
+void RFBSS::onConnectionStatus_received(const conn_status p_status)
+{
+    qDebug() << "onConnectionStatus_received \n";
+    switch (p_status)
+    {
+        case conn_status::CONNECTED:
+        {
+            ui->btnConnectSSH->setEnabled(true);
+            ui->btnConnectSSH->setText("Disconnect");
+            ui->lbl_connStatus->setText("Connected");
+            ui->lbl_connStatus->setStyleSheet("font:bold; color:darkgreen;");
+            m_progressBar->hide();
+        }
+        break;
+        case conn_status::DISCONNECTED:
+        {
+            ui->btnConnectSSH->setEnabled(true);
+            ui->btnConnectSSH->setText("Connect");
+            ui->lbl_connStatus->setText("Disconnected");
+            ui->lbl_connStatus->setStyleSheet("font:bold; color:darkred;");
+            m_progressBar->hide();
+        }
+        break;
+        case conn_status::IN_PROGRESS:
+        {
+            ui->btnConnectSSH->setEnabled(false);
+            emit ShowProgressBar(true);
+        }
+        break;
+        default:
+        break;
+    }
+}
+
+void RFBSS::onConnectSSH_clicked()
+{
+     qDebug() << "onConnectSSH_clicked \n";
+     m_conn_status_mutex.lock();
+     if(m_con == NULL || !ssh_is_connected(m_con))
+     {
+         //connect ssh
+         std::thread (Connect,this).detach();
+     }
+     else
+     {
+         //disconnect ssh
+         ssh_disconnect(m_con);
+         emit ConnectionStatus(conn_status::DISCONNECTED);
+     }
+     m_conn_status_mutex.unlock();
+}
+
+void RFBSS::onShowProgressBar_received(const bool & p_active)
+{
+    qDebug() << "onShowProgressBar_received \n";
+    if(m_progressBar)
+    {
+        if(p_active)
+        {
+            QPoint l_p = (this->rect().center());
+            m_progressBar->setGeometry(l_p.x() - 125,l_p.y() -10,250,20);
+            m_progressBar->show();
+        }
+        else
+        {
+            m_progressBar->hide();
+        }
+    }
+}
 
 #if 0
 

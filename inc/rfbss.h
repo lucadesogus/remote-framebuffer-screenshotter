@@ -12,12 +12,24 @@
 #include <QPrinter>
 #endif
 
+#include <mutex>
+#include <QMetaType>
+#include <QProgressBar>
+
 class QAction;
 class QLabel;
 class QMenu;
 class QScrollArea;
 class QScrollBar;
 
+
+enum class conn_status
+{
+    DISCONNECTED,
+    CONNECTED,
+    IN_PROGRESS
+};
+Q_DECLARE_METATYPE(conn_status);
 
 namespace Ui {
 class RFBSS;
@@ -57,6 +69,16 @@ private:
 
     static void TakeSnapshot(RFBSS * p_parent);
 
+    static void checkConnectionStatus_Thread(RFBSS * p_parent);
+
+    std::mutex m_conn_status_mutex;
+
+    std::mutex m_send_cmd_mutex;
+
+    std::mutex m_capture_image_mutex;
+
+    QProgressBar * m_progressBar;
+
 #ifndef QT_NO_PRINTER
     QPrinter printer;
 #endif
@@ -92,10 +114,14 @@ private:
     void onShowMessageBox_received(int p_type, QString p_title, QString p_message) ;
     void onDetectedWidthHeight_received(int,int);
     void onShowStatusbarMessage_received(QString);
+    void onConnectionStatus_received(const conn_status p_status);
+    void onShowProgressBar_received(const bool & p_active);
 
     void onNewProfile_clicked();
     void onLoadProfile_clicked();
     void onSaveProfile_clicked();
+
+    void onConnectSSH_clicked();
 
 signals:
     void LogResult( QString);
@@ -103,6 +129,10 @@ signals:
     void ShowMessageBox(int,QString,QString);
     void DetectedWidthHeight(int,int);
     void ShowStatusbarMessage(QString);
+    void ConnectionStatus(const conn_status);
+    void ShowProgressBar(const bool & p_active);
 };
+
+
 
 #endif // RFBSS_H
