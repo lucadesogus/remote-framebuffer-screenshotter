@@ -16,8 +16,11 @@ CONFIG += c++11
 win32:CONFIG(debug, debug|release) DESTDIR = $$PWD/build/win/debug
 win32:CONFIG(release, debug|release) DESTDIR = $$PWD/build/win/release
 
-unix:CONFIG(debug, debug|release) DESTDIR = $$PWD/build/linux/debug
-unix:CONFIG(release, debug|release) DESTDIR = $$PWD/build/linux/release
+unix:!macx:CONFIG(debug, debug|release) DESTDIR = $$PWD/build/linux/debug
+unix:!macx:CONFIG(release, debug|release) DESTDIR = $$PWD/build/linux/release
+
+macx:CONFIG(debug, debug|release) DESTDIR = $$PWD/build/mac/debug
+macx:CONFIG(release, debug|release) DESTDIR = $$PWD/build/mac/release
 
 DEFINES += QT_DEPRECATED_WARNINGS QT_WIDGETS_LIB QT_PRINTSUPPORT_LIB
 
@@ -26,7 +29,8 @@ INCLUDEPATH += . \
                ./lib/inc #change this line with the path in which header files of libssh resides in your env
 
 win32: INCLUDEPATH += $$quote(C:/Program Files (x86)/Microsoft SDKs/Windows/v7.1A/Include) #may differs in your env
-else:unix: INCLUDEPATH += /usr/lib/x86_64-linux-gnu #may differs in your env
+else:unix:!macx: INCLUDEPATH += /usr/lib/x86_64-linux-gnu #may differs in your env
+else:macx: INCLUDEPATH += /usr/local/include
 
 SOURCES += \
         ./src/rfbss.cpp \
