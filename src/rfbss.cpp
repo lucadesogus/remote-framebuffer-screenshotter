@@ -31,6 +31,10 @@ RFBSS::RFBSS(QWidget *parent) :
     QObject::connect(ui->btnNewProfile,SIGNAL(clicked()),this,SLOT(onNewProfile_clicked()));
     QObject::connect(ui->btnConnectSSH,SIGNAL(clicked()),this,SLOT(onConnectSSH_clicked()));
 
+    ui->listProfiles->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(ui->listProfiles, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(showProfileContextMenu(QPoint)));
+    connect(ui->listProfiles->itemDelegate(), SIGNAL(closeEditor(QWidget*, QAbstractItemDelegate::EndEditHint)), this, SLOT(profileNameEditEnd(QWidget*, QAbstractItemDelegate::EndEditHint)));
+
     QObject::connect(this,SIGNAL(DetectedWidthHeight(int,int)),this,SLOT(onDetectedWidthHeight_received(int,int)));
 
     QObject::connect(this, SIGNAL(ShowStatusbarMessage(QString)), this, SLOT(onShowStatusbarMessage_received(QString)));
@@ -38,6 +42,8 @@ RFBSS::RFBSS(QWidget *parent) :
      QObject::connect(this, SIGNAL(ConnectionStatus(const conn_status)), this, SLOT(onConnectionStatus_received(const conn_status)));
 
     QObject::connect(this, SIGNAL(ShowProgressBar(const bool &)), this, SLOT(onShowProgressBar_received(const bool & )));
+
+
 
      //	imageLabel = ui->imglabel;
     imageLabel = new QLabel;
@@ -161,10 +167,12 @@ ui->listProfiles->clear();
  loadProfile(p_sel);
  for(auto x = 0; x != l_finalList.size() ;++x)
  {
+     ui->listProfiles->item(x)->setFlags (ui->listProfiles->item(x)->flags () | Qt::ItemIsEditable);
+     ui->listProfiles->item(x)->setData(Qt::UserRole + 1 ,ui->listProfiles->item(x)->text()); //original name
      if(l_finalList.at(x) == p_sel)
      {
          ui->listProfiles->setItemSelected(ui->listProfiles->item(x),true);
-         break;
+        // break;
      }
  }
 
@@ -961,6 +969,56 @@ void RFBSS::onShowProgressBar_received(const bool & p_active)
         }
     }
 }
+
+void RFBSS::showProfileContextMenu(const QPoint &pos)
+{
+    QPoint globalPos = ui->listProfiles->mapToGlobal(pos);
+    QMenu myMenu;
+    myMenu.addAction("Erase",  this, SLOT(eraseProfile()));
+    myMenu.exec(globalPos);
+}
+
+void RFBSS::eraseProfile()
+{
+
+}
+
+void RFBSS::profileNameEditEnd(QWidget *editor, QAbstractItemDelegate::EndEditHint hint)
+{
+    if(editor)
+    {
+        QString  NewValue = reinterpret_cast<QLineEdit*>(editor)->text();
+        qDebug()<<NewValue;
+        bool l_isNewName = true;
+        for (int i = 0; i != ui->listProfiles->count(); ++i)
+        {
+            if(!ui->listProfiles->item(i)->isSelected() && NewValue == ui->listProfiles->item(i)->text())
+            {
+                l_isNewName = false;
+                break;
+            }
+        }
+
+        auto * l_item = ui->listProfiles->selectedItems().back();
+        if(l_item)
+        {
+            QString  oldValue = l_item->data(Qt::UserRole +1).toString();
+            qDebug()<<oldValue;
+            if(l_isNewName &&QFile::rename("profiles/" + oldValue + ".profile","profiles/" + NewValue + ".profile"))
+            {
+                l_item->setData(Qt::UserRole +1, NewValue);
+            }
+            else
+            {
+                l_item->setText(oldValue);
+            }
+
+        }
+    }
+
+
+}
+
 
 #if 0
 

@@ -15,7 +15,7 @@
 #include <mutex>
 #include <QMetaType>
 #include <QProgressBar>
-
+#include <QAbstractItemDelegate>
 class QAction;
 class QLabel;
 class QMenu;
@@ -29,7 +29,7 @@ enum class conn_status
     CONNECTED,
     IN_PROGRESS
 };
-Q_DECLARE_METATYPE(conn_status);
+Q_DECLARE_METATYPE(conn_status)
 
 namespace Ui {
 class RFBSS;
@@ -122,6 +122,12 @@ private:
     void onSaveProfile_clicked();
 
     void onConnectSSH_clicked();
+
+    void showProfileContextMenu(const QPoint &pos);
+
+    void eraseProfile();
+
+    void profileNameEditEnd(QWidget *editor, QAbstractItemDelegate::EndEditHint hint);
 
 signals:
     void LogResult( QString);
